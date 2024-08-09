@@ -49,7 +49,7 @@ pages:
     - poetry install --with dev,ner
     - poetry run sphinx-build -a -E -b html docs public 
     - poetry build
-    - TWINE_PASSWORD=${CI_JOB_TOKEN} python -m twine upload dist/*
+    - python -m twine upload -p ${CI_JOB_TOKEN} dist/*
   artifacts:
     untracked: false
     when: on_success
