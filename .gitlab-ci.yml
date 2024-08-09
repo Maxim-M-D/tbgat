@@ -45,10 +45,11 @@ pages:
     - conda create --name test_tbgat python=3.11
     - conda activate test_tbgat
     - conda info
-    - pip install -U poetry setuptools
+    - pip install -U poetry setuptools twine
     - poetry install --with dev,ner
     - poetry run sphinx-build -a -E -b html docs public 
-    - poetry publish --build --repository https://gitlab.lrz.de/api/v4/projects/190266/packages/pypi
+    - poetry build
+    - TWINE_PASSWORD=${CI_JOB_TOKEN} python -m twine upload dist/*
   artifacts:
     untracked: false
     when: on_success
