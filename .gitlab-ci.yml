@@ -48,6 +48,7 @@ pages:
     - pip install -U poetry setuptools
     - poetry install --with dev,ner
     - poetry run sphinx-build -a -E -b html docs public 
+    - poetry publish --build --repository https://gitlab.lrz.de/api/v4/projects/nlp-tweets-geo/packages/pypi
   artifacts:
     untracked: false
     when: on_success
