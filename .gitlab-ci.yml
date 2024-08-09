@@ -1,0 +1,142 @@
+# This file is a template, and might need editing before it works on your project.
+# To contribute improvements to CI/CD templates, please follow the Development guide at:
+# https://docs.gitlab.com/ee/development/cicd/templates.html
+# This specific template is located at:
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Python.gitlab-ci.yml
+
+# Official language image. Look for the different tagged releases at:
+# https://hub.docker.com/r/library/python/tags/
+#image: python:latest
+
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+# https://pip.pypa.io/en/stable/topics/caching/
+cache:
+  paths:
+    - .cache/pip
+
+stages:
+  - doall
+  - setup
+  - install
+  - test
+  - deploy
+  - teardown
+
+#before_script:
+#  - python --version ; pip --version  # For debugging
+#  - pip install virtualenv
+#  - virtualenv venv
+#  - source venv/bin/activate
+#  - conda create --name test_tbgat python=3.11
+#  - conda activate test_tbgat
+#  - pip install -U poetry setuptools
+#  - poetry install --with test
+
+#after_script:
+#  - conda remove -n test_tbgat --all
+
+pages:
+  stage: doall
+  script:
+    - conda create --name test_tbgat python=3.11
+    - conda activate test_tbgat
+    - conda info
+    - pip install -U poetry setuptools
+    - poetry install --with dev,ner
+    - poetry run sphinx-build -a -E -b html docs public 
+  artifacts:
+    untracked: false
+    when: on_success
+    access: all
+    expire_in: 30 days
+    paths:
+      - public
+
+
+setup:
+  stage: setup
+  script:
+#    - pip install -U virtualenv
+#    - python -m venv .venv
+#    - source .venv/bin/activate
+    - conda create --name test_tbgat python=3.11
+  when: manual
+
+
+install:
+  stage: install
+  script:
+    - conda activate test_tbgat; pip install -U poetry setuptools
+    - conda activate test_tbgat; poetry install --with test,docs
+  before_script:
+    - conda activate test_tbgat; conda info
+  when: manual
+
+test:
+  stage: test
+  needs:
+    - setup
+  script:
+    - conda activate test_tbgat; pytest --cov --cov-report term --cov-report xml:coverage.xml --junitxml=report.xml
+  before_script:
+    - conda activate test_tbgat; conda info
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+      junit: report.xml
+  when: manual
+
+#pages:
+#  stage: deploy
+#  needs:
+#    - setup
+#  script: 
+#    - conda activate test_tbgat; sphinx-build docs public 
+#  before_script:
+#    - conda activate test_tbgat; conda info
+#  artifacts:
+#    untracked: false
+#    when: on_success
+#    access: all
+#    expire_in: 30 days
+#    paths:
+#      - public
+#  when: manual
+
+teardown:
+  stage: teardown
+  when: manual
+  script:
+    - conda remove -n test_tbgat --all
+
+#run:
+#  script:
+#    - pip install .
+    # run the command here
+#  artifacts:
+#    paths:
+#      - build/*
+
+#pages:
+#  script:
+#    - pip install sphinx sphinx-rtd-theme
+#    - cd doc
+#    - make html
+#    - mv build/html/ ../public/
+#  artifacts:
+#    paths:
+#      - public
+#  rules:
+#    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+#deploy:
+#  stage: deploy
+#  script: echo "Define your deployment script!"
+#  environment: production

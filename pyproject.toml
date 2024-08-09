@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "tbgat"
+version = "0.1.0"
+description = ""
+authors = ["LMU"]
+readme = "README.md"
+packages = [
+    { include = "tbgat" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+lingua-language-detector = "^2.0.2"
+dacite = "^1.8.1"
+geopandas = "^1.0.1"
+tenacity = "^9.0.0"
+pyahocorasick = "^2.1.0"
+transformers = "^4.44.0"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.2"
+pytest-cov = "^5.0.0"
+sphinx = "^8.0.2"
+pydata-sphinx-theme = "^0.15.4"
+pylint = "^3.2.6"
+graphviz = "^0.20.3"
+
+[tool.poetry.group.ner]
+optional = true
+
+[tool.poetry.group.ner.dependencies]
+torch = "^2.4.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
