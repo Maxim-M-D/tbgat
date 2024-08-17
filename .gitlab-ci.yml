@@ -12,6 +12,7 @@
 # only cache local items.
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  PY_VERSION: "3.11"
 
 # https://pip.pypa.io/en/stable/topics/caching/
 cache:
@@ -19,10 +20,10 @@ cache:
     - .cache/pip
 
 stages:
-  - doall
   - setup
   - install
   - test
+  - pages
   - deploy
   - teardown
 
@@ -39,54 +40,52 @@ stages:
 #after_script:
 #  - conda remove -n test_tbgat --all
 
-pages:
-  stage: doall
-  script:
-    - conda create --name test_tbgat python=3.11
-    - conda activate test_tbgat
-    - conda info
-    - D:\anaconda3\envs\test_tbgat\python.exe -m pip install -U poetry setuptools twine #TODO: Get python executable
-    - D:\anaconda3\envs\test_tbgat\python.exe -m poetry install --extras ner --with dev
-    - D:\anaconda3\envs\test_tbgat\python.exe -m poetry run sphinx-build -a -E -b html docs public 
-    - D:\anaconda3\envs\test_tbgat\python.exe -m poetry build
-    - D:\anaconda3\envs\test_tbgat\python.exe -m twine upload -u gitlab-ci-token -p ${CI_JOB_TOKEN} --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
-    - conda remove -n test_tbgat --all -y
-  artifacts:
-    untracked: false
-    when: on_success
-    access: all
-    expire_in: 30 days
-    paths:
-      - public
+# pages:
+#   stage: doall
+#   script:
+#     - conda create --name test_tbgat python=3.11
+#     - conda activate test_tbgat
+#     - conda info
+#     - D:\anaconda3\envs\test_tbgat\python.exe -m pip install -U poetry setuptools twine #TODO: Get python executable
+#     - D:\anaconda3\envs\test_tbgat\python.exe -m poetry install --extras ner --with dev
+#     - D:\anaconda3\envs\test_tbgat\python.exe -m poetry run sphinx-build -a -E -b html docs public 
+#     - D:\anaconda3\envs\test_tbgat\python.exe -m poetry build
+#     - D:\anaconda3\envs\test_tbgat\python.exe -m twine upload -u gitlab-ci-token -p ${CI_JOB_TOKEN} --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+#     - conda remove -n test_tbgat --all -y
+#   artifacts:
+#     untracked: false
+#     when: on_success
+#     access: all
+#     expire_in: 30 days
+#     paths:
+#       - public
 
 
 setup:
   stage: setup
   script:
-#    - pip install -U virtualenv
-#    - python -m venv .venv
-#    - source .venv/bin/activate
-    - conda create --name test_tbgat python=3.11
-  when: manual
+    - conda create --name test_tbgat python=${PY_VERSION}
+    - echo "PYTHON_EXECUTABLE=$((conda env export -n pyddd --json | ConvertFrom-Json).prefix)\python.exe" >> build.env
+  when: always
+  artifacts:
+    reports:
+      dotenv: build.env
 
 
 install:
   stage: install
   script:
-    - conda activate test_tbgat; pip install -U poetry setuptools
-    - conda activate test_tbgat; poetry install --with test,docs
-  before_script:
-    - conda activate test_tbgat; conda info
-  when: manual
+    - '& ${PYTHON_EXECUTABLE} -m pip install -U poetry setuptools'
+    - '& ${PYTHON_EXECUTABLE} -m poetry install --extras ner --with dev'
+  when: always
 
 test:
   stage: test
   needs:
     - setup
+    - install
   script:
-    - conda activate test_tbgat; pytest --cov --cov-report term --cov-report xml:coverage.xml --junitxml=report.xml
-  before_script:
-    - conda activate test_tbgat; conda info
+    - '& ${PYTHON_EXECUTABLE} -m pytest --cov --cov-report term --cov-report xml:coverage.xml --junitxml=report.xml'
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
     reports:
@@ -94,30 +93,39 @@ test:
         coverage_format: cobertura
         path: coverage.xml
       junit: report.xml
-  when: manual
+  when: always
 
-#pages:
-#  stage: deploy
-#  needs:
-#    - setup
-#  script: 
-#    - conda activate test_tbgat; sphinx-build docs public 
-#  before_script:
-#    - conda activate test_tbgat; conda info
-#  artifacts:
-#    untracked: false
-#    when: on_success
-#    access: all
-#    expire_in: 30 days
-#    paths:
-#      - public
-#  when: manual
+pages:
+ stage: pages
+ needs:
+   - setup
+   - install
+ script: 
+   - '& ${PYTHON_EXECUTABLE} -m poetry run sphinx-build -a -E -b html docs public' 
+ artifacts:
+   untracked: false
+   when: on_success
+   access: all
+   expire_in: 30 days
+   paths:
+     - public
+ when: always
+
+deploy:
+  stage: deploy
+  needs:
+    - setup
+    - install
+  script:
+    - '& ${PYTHON_EXECUTABLE} -m poetry build'
+    - '& ${PYTHON_EXECUTABLE} -m twine upload -u gitlab-ci-token -p ${CI_JOB_TOKEN} --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*'
+  when: always
 
 teardown:
   stage: teardown
-  when: manual
+  when: always
   script:
-    - conda remove -n test_tbgat --all
+    - conda remove -n test_tbgat --all -y
 
 #run:
 #  script:
