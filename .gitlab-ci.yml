@@ -76,8 +76,8 @@ setup:
 install:
   stage: install
   script:
-    - '& ${PYTHON_EXECUTABLE} -m pip install -U poetry setuptools'
-    - '& ${PYTHON_EXECUTABLE} -m poetry install --extras ner --with dev'
+    - '& ${PYTHON_EXECUTABLE} -m pip install -U poetry setuptools twine'
+    - '& ${PYTHON_EXECUTABLE} -m poetry install --extras ner --with dev --verbose'
   when: always
 
 test:
