@@ -6,7 +6,9 @@ from tbgat.pattern_matching import AhoCorasickMatcher
 from tbgat.pipeline import MultilingualResponse, component
 from tbgat.pipeline.prebuilt.TBGATBasePipeline import TBGATBasePipeline
 from tbgat.shared import PostProcessingReturnType, SpanSet
+import pkg_resources
 
+get_file_path = lambda x: pkg_resources.resource_filename("tbgat", f"pattern_matching/generated_data/{x}")
 
 class TBGATPerformancePipeline(TBGATBasePipeline):
     """Pipeline for text-based geographical assignment of tweets. This pipeline is responsible for preprocessing, language detection, location mapping, special case matching, and pattern matching.
@@ -26,8 +28,9 @@ class TBGATPerformancePipeline(TBGATBasePipeline):
     def pattern_matcher(
         size: Literal["small", "medium", "large"] = "small"
     ) -> MultilingualResponse[AhoCorasickMatcher]:
+        path = get_file_path(f"ukr_populated_places_20240607_{size}.csv")
         df = pd.read_csv(
-            f"./tbgat/pattern_matching/generated_data/ukr_populated_places_20240607_{size}.csv",
+            path,
             sep=",",
         )
         en_pattern_matcher = AhoCorasickMatcher(df["English"].tolist())
