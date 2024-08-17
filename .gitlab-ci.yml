@@ -13,6 +13,7 @@
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
   PY_VERSION: "3.11"
+  ENV_NAME: "test_tbgat"
 
 # https://pip.pypa.io/en/stable/topics/caching/
 cache:
@@ -64,8 +65,8 @@ stages:
 setup:
   stage: setup
   script:
-    - conda create --name test_tbgat python=${PY_VERSION}
-    - echo "PYTHON_EXECUTABLE=$((conda env export -n pyddd --json | ConvertFrom-Json).prefix)\python.exe" >> build.env
+    - conda create --name ${ENV_NAME} python=${PY_VERSION}
+    - echo "PYTHON_EXECUTABLE=$((conda env export -n ${ENV_NAME} --json | ConvertFrom-Json).prefix)\python.exe" >> build.env
   when: always
   artifacts:
     reports:
