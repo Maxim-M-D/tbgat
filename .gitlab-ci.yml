@@ -45,11 +45,11 @@ pages:
     - conda create --name test_tbgat python=3.11
     - conda activate test_tbgat
     - conda info
-    - pip install -U poetry setuptools twine
-    - poetry install --extras ner --with dev
-    - poetry run sphinx-build -a -E -b html docs public 
-    - poetry build
-    - python -m twine upload -u gitlab-ci-token -p ${CI_JOB_TOKEN} --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+    - D:\anaconda3\envs\test_tbgat\python.exe -m pip install -U poetry setuptools twine #TODO: Get python executable
+    - D:\anaconda3\envs\test_tbgat\python.exe -m poetry install --extras ner --with dev
+    - D:\anaconda3\envs\test_tbgat\python.exe -m poetry run sphinx-build -a -E -b html docs public 
+    - D:\anaconda3\envs\test_tbgat\python.exe -m poetry build
+    - D:\anaconda3\envs\test_tbgat\python.exe -m twine upload -u gitlab-ci-token -p ${CI_JOB_TOKEN} --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
   artifacts:
     untracked: false
     when: on_success
