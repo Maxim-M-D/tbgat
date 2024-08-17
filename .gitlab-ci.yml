@@ -24,7 +24,6 @@ stages:
   - setup
   - install
   - test
-  - pages
   - deploy
   - teardown
 
@@ -86,7 +85,7 @@ test:
     - setup
     - install
   script:
-    - '& ${PYTHON_EXECUTABLE} -m pytest --cov --cov-report term --cov-report xml:coverage.xml --junitxml=report.xml'
+    - '& ${PYTHON_EXECUTABLE} -m poetry run pytest --cov --cov-report term --cov-report xml:coverage.xml --junitxml=report.xml'
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
     reports:
@@ -97,7 +96,7 @@ test:
   when: always
 
 pages:
- stage: pages
+ stage: deploy
  needs:
    - setup
    - install
@@ -112,7 +111,7 @@ pages:
      - public
  when: always
 
-deploy:
+publish:
   stage: deploy
   needs:
     - setup
