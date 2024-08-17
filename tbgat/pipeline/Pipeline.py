@@ -91,6 +91,8 @@ class Component(Generic[_T]):
 
     _executor: Executor[_Q, _R]
 
+    __slots__ = ["_klass", "_executor_registered", "_cache"]
+
     def __init__(self, func: Callable[[], _T]):
         self._klass = func
         self._executor_registered = False
@@ -179,7 +181,7 @@ class PipelineProtocolMeta(PipelineProto, PipelineMeta):
 class Pipeline(metaclass=PipelineProtocolMeta):
     """Pipeline class"""
 
-    def __init__(self, **kwargs: Any):
+    def __init__(self, /, **kwargs: Any):
         """Initializes the Pipeline object.
         Optionally keyword arguments can be passed to the components.
         If keywords arguments are passed to the pipeline, we will pass them to the component that requires them.
@@ -193,3 +195,18 @@ class Pipeline(metaclass=PipelineProtocolMeta):
                 annos = obj._klass.__annotations__
                 c_kwargs = {k: v for k, v in kwargs.items() if k in list(annos.keys())}
                 obj.build(**c_kwargs)
+
+    
+    def __getstate__(self) -> dict[str, Any]:
+        state = {}
+        for meth in self.__dir__():
+            obj = getattr(self, meth)
+            if isinstance(obj, Component):
+                state[meth] = obj._cache
+        return state
+    
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        for meth in self.__dir__():
+            obj = getattr(self, meth)
+            if isinstance(obj, Component):
+                obj._cache = state[meth]

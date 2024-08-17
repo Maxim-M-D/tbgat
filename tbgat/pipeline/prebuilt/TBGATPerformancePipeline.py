@@ -16,7 +16,7 @@ class TBGATPerformancePipeline(TBGATBasePipeline):
     The Accuracy and the F!-score are lower than the measures of the TBGATQuality pipeline.
     """
 
-    def __init__(self, size: Literal["small", "medium", "large"]):
+    def __init__(self, *, size: Literal["small", "medium", "large"]):
         """Initializes the TBGATPerformancePipeline class.
 
         Args:

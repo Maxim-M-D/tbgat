@@ -18,7 +18,7 @@ class TBGATQualityPipeline(TBGATBasePipeline):
     This is our highest quality pipeline, as it uses all available methods. It is recommended for small datasets or when high accuracy is required.
     """
 
-    def __init__(self, size: Literal["small", "medium", "large"]):
+    def __init__(self, *, size: Literal["small", "medium", "large"]):
         """Initializes the TBGATQualityPipeline class.
 
         Args:
