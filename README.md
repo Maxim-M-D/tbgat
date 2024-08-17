@@ -23,14 +23,9 @@ Install optional dev dependencies as well
 poetry install --with dev
 ```
 
-Install optional ner dependencies as well
+Install with extras
 ```powershell
-poetry install --with ner
-```
-
-You can also install everything at once
-```powershell
-poetry install --with dev,ner
+poetry install --extras ner
 ```
 
 # Usage
