@@ -197,7 +197,7 @@ class Pipeline(metaclass=PipelineProtocolMeta):
                 obj.build(**c_kwargs)
 
     
-    def __getstate__(self) -> dict[str, Any]:
+"""     def __getstate__(self) -> dict[str, Any]:
         state = {}
         for meth in self.__dir__():
             obj = getattr(self, meth)
@@ -209,4 +209,4 @@ class Pipeline(metaclass=PipelineProtocolMeta):
         for meth in self.__dir__():
             obj = getattr(self, meth)
             if isinstance(obj, Component):
-                obj._cache = state[meth]
+                obj._cache = state[meth] """
