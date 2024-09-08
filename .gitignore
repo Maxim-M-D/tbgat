@@ -1,5 +1,7 @@
 # custom stuff
 log.txt
+temp
+osm.db
 
 #Openstreetmap stuff
 cache/

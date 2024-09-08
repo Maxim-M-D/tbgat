@@ -8,6 +8,8 @@ import dask
 from dask.distributed import Client
 import dask.dataframe as dd
 
+from tbgat.pipeline.prebuilt.TBGATQualityPipeline import TBGATQualityPipeline
+
 def test_pickling():
     pipeline = TBGATPerformancePipeline(size="small")
     file_obj = io.BytesIO()
@@ -66,3 +68,15 @@ def test_dask_apply():
     client.close()
     assert df["predicted"] is not None
     assert len(df["predicted"]) == 3
+
+def test_run_in_parallel():
+    pipeline = TBGATQualityPipeline(size="small")
+    df = pd.DataFrame({"tweet": ["Ive been to Kiev last week", "Львів", "Харькoв"]})
+    df = pipeline.run_in_parallel(df, "tweet")
+    assert df is not None
+
+def test_run_in_parallel2():
+    pipeline = TBGATQualityPipeline(size="small")
+    df = pd.DataFrame({"tweet": ["Ive been to Kiev last week", "Минулого тижня я був у Львові", "I like Sevastopol. Минулого тижня я був у Львові"]})
+    df = pipeline.run_in_parallel(df, "tweet")
+    assert df is not None

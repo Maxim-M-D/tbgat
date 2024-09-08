@@ -30,4 +30,11 @@ poetry install --extras ner
 
 # Usage
 
-TBD
+In order to run the pipelines, a database should be created. This can be done running the following command in the terminal
+```powershell
+tbgat init -c ukraine
+```
+
+This will set up an sqlite database called osm. 
+
+

@@ -4,7 +4,7 @@ from tbgat.language_detection import (
     LinguaLanguageDetection,
     LinguaLanguageDetectionResult,
 )
-from tbgat.location_mapping import OpenStreetMapLocationMapper
+from tbgat.location_mapping2 import OSMMapper
 from tbgat.pipeline import Pipeline, component
 from tbgat.Preprocessor import PreProcessor
 from tbgat.shared import PostProcessingReturnType, SpanSet
@@ -37,13 +37,13 @@ class TBGATBasePipeline(Pipeline):
         return cmp.detect_languages(inpt)
 
     @component
-    def location_mapper() -> OpenStreetMapLocationMapper:
-        return OpenStreetMapLocationMapper()
+    def location_mapper() -> OSMMapper:
+        return OSMMapper()
 
     @staticmethod
     @location_mapper.executor
     def map_locations(
-        cmp: OpenStreetMapLocationMapper, inpt: SpanSet
+        cmp: OSMMapper, inpt: SpanSet
     ) -> List[PostProcessingReturnType]:
         return cmp.map_locations(inpt)
 

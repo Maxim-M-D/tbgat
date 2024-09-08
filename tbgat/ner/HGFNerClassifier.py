@@ -1,4 +1,4 @@
-from typing import cast
+from typing import List, cast, overload
 from logging import info
 from tbgat.shared import Span, SpanSet
 
@@ -63,7 +63,14 @@ class HuggingFaceNERClassifier:
         """Converts a tweet to lowercase."""
         return tweet.lower()
 
+    @overload
     def predict(self, text: str) -> SpanSet:
+        ...
+    @overload
+    def predict(self, text: List[str]) -> List[SpanSet]:
+        ...
+
+    def predict(self, text):
         """Predicts named entities in a given tweet.
         If the prediction is empty, an empty SpanSet is returned.
 
@@ -77,22 +84,48 @@ class HuggingFaceNERClassifier:
         pred = self.pipeline(text)
 
         if not pred:
-            return SpanSet()
-        return SpanSet(
-            [
-                Span(
-                    entity=cast(str, ent["entity_group"]).strip(),
-                    start=ent["start"],
-                    end=ent["end"],
-                    word=self.lower(self.remove_punct(ent["word"]).strip()),
-                    score=ent["score"],
+            if isinstance(text, str):
+                return SpanSet()
+            return [SpanSet() for _ in text]
+        if isinstance(text, str):
+            return SpanSet(
+                [
+                    Span(
+                        entity=cast(str, ent["entity_group"]).strip(),
+                        start=ent["start"],
+                        end=ent["end"],
+                        word=self.lower(self.remove_punct(ent["word"]).strip()),
+                        score=ent["score"],
+                    )
+                    for ent in pred
+                    if ent["score"] >= self.threshold
+                    and (
+                        ent["entity_group"] == "location"
+                        or ent["entity_group"] == "place_name"
+                        or ent["entity_group"] == "LOC"
+                    )
+                ]
+            )
+        else:
+            return [
+                SpanSet(
+                    [
+                        Span(
+                            entity=cast(str, ent["entity_group"]).strip(),
+                            start=ent["start"],
+                            end=ent["end"],
+                            word=self.lower(self.remove_punct(ent["word"]).strip()),
+                            score=ent["score"],
+                        )
+                        for ent in pred
+                        if ent["score"] >= self.threshold
+                        and (
+                            ent["entity_group"] == "location"
+                            or ent["entity_group"] == "place_name"
+                            or ent["entity_group"] == "LOC"
+                        )
+                    ]
                 )
-                for ent in pred
-                if ent["score"] >= self.threshold
-                and (
-                    ent["entity_group"] == "location"
-                    or ent["entity_group"] == "place_name"
-                    or ent["entity_group"] == "LOC"
-                )
+                for pred in pred
             ]
-        )
+        
