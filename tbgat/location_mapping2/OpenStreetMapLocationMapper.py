@@ -178,7 +178,7 @@ class OSMMapper:
             osms = self._query_geonames(alternatenames)
             found_geoms = self.combine_osm_extract_with_alternatenames(osms, alternatenames)
             for geom in found_geoms:
-                if geom.feature_class == "A":
+                if geom.feature_class == "A" or geom.feature_class == "P":
                     found_adm1 = self.find_adm1_from_osmfeature(geom, span.word)
                     if found_adm1:
                         found_adm1s = found_adm1s.union(found_adm1)

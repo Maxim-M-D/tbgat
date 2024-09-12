@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tbgat"
-version = "0.1.9"
+version = "0.1.10"
 description = ""
 authors = ["LMU"]
 readme = "README.md"
