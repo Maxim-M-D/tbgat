@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass(unsafe_hash=True)
@@ -34,6 +35,7 @@ class PostProcessingReturnType:
     latitude: float
     longitude: float
     relevance: float
+    population: Optional[int] = None
 
     def __post_init__(self):
         """

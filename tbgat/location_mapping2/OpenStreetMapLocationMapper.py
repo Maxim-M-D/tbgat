@@ -67,27 +67,22 @@ class OSMMapper:
             pd.concat([self.adm1, kyiv_oblast], ignore_index=True)
         )
 
-    def combine_osm_extract_with_alternatenames(self, osm_extract: list[OSMExtract], alternatenames: list[AlternateName]) -> list[OSMMapping]:
+    def combine_osm_extract_with_alternatenames(self, osm_extract: OSMExtract, alternatenames: list[AlternateName]) -> OSMMapping:
         alternatenames_dict = {name.geonameid: name for name in alternatenames}
-        osm_mapping = []
-        for osm in osm_extract:
-            osm_mapping.append(
-                OSMMapping(
-                    geonameid=osm.geonameid,
-                    name=osm.name,
-                    latitude=osm.latitude,
-                    longitude=osm.longitude,
-                    feature_name=osm.feature_name,
-                    feature_class=osm.feature_class,
-                    feature_code=osm.feature_code,
-                    population=osm.population,
-                    name_en=alternatenames_dict[osm.geonameid].name_en,
-                    name_de=alternatenames_dict[osm.geonameid].name_de,
-                    name_ru=alternatenames_dict[osm.geonameid].name_ru,
-                    name_ua=alternatenames_dict[osm.geonameid].name_ua
-                )
-            )
-        return osm_mapping
+        return OSMMapping(
+            geonameid=osm_extract.geonameid,
+            name=osm_extract.name,
+            latitude=osm_extract.latitude,
+            longitude=osm_extract.longitude,
+            feature_name=osm_extract.feature_name,
+            feature_class=osm_extract.feature_class,
+            feature_code=osm_extract.feature_code,
+            population=osm_extract.population,
+            name_en=alternatenames_dict[osm_extract.geonameid].name_en,
+            name_de=alternatenames_dict[osm_extract.geonameid].name_de,
+            name_ru=alternatenames_dict[osm_extract.geonameid].name_ru,
+            name_ua=alternatenames_dict[osm_extract.geonameid].name_ua
+        )
 
     def unique_alternatenames_from_extract(self, extract: list[AlternateNameExtract]) -> list[AlternateName]:
         unique_names = {}
@@ -136,14 +131,15 @@ class OSMMapper:
     
     def _query_geonames(self, alternatenames: list[AlternateName]):
         with sqlite3.connect("osm.db") as conn:
-            osms = []
+            osms: list[OSMExtract] = []
             c = conn.cursor()
             conn.row_factory = sqlite3.Row
             c.row_factory = conn.row_factory
             for itm in alternatenames:
                 c.execute(GEONAME_BY_ID_SQL, (itm.geonameid,))
                 osms.extend([OSMExtract.model_validate(dict(i)) for i in c.fetchall()])
-        return osms
+        return max(osms, key=lambda x: x.population)
+
     
     def find_adm1_from_osmfeature(self, feature: OSMMapping, word: str):
         polygon = shapely.geometry.point.Point(feature.longitude, feature.latitude)
@@ -159,6 +155,7 @@ class OSMMapper:
                     latitude=feature.latitude,
                     longitude=feature.longitude,
                     relevance=0.0,
+                    population=feature.population, 
                 )
                 for _, adm1 in found_adms.iterrows()
             ]
@@ -177,9 +174,7 @@ class OSMMapper:
             alternatenames = self._query_alternatenames_by_geonameid(geoname_ids)
             osms = self._query_geonames(alternatenames)
             found_geoms = self.combine_osm_extract_with_alternatenames(osms, alternatenames)
-            for geom in found_geoms:
-                if geom.feature_class == "A" or geom.feature_class == "P":
-                    found_adm1 = self.find_adm1_from_osmfeature(geom, span.word)
-                    if found_adm1:
-                        found_adm1s = found_adm1s.union(found_adm1)
+            found_adm1 = self.find_adm1_from_osmfeature(found_geoms, span.word)
+            if found_adm1:
+                found_adm1s = found_adm1s.union(found_adm1)
         return list(found_adm1s)

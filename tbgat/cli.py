@@ -1,3 +1,4 @@
+import io
 import os
 import click
 import requests
@@ -6,13 +7,20 @@ import zipfile
 import pathlib
 import sqlite3
 
+from tqdm import tqdm
+
 GEONAME_URL = "https://download.geonames.org/export/dump/{country_name}.zip"
 ALTERNATENAME = "https://download.geonames.org/export/dump/alternatenames/{country_name}.zip"
 FEATURECODES_URL = "https://download.geonames.org/export/dump/featureCodes_en.txt"
 
+ALL_COUNTRIES_GEONAMES_URL = "https://download.geonames.org/export/dump/allCountries.zip"
+ALL_COUNTRIES_ALTERNATENAME_URL = "https://download.geonames.org/export/dump/alternateNames.zip"
+
 @enum.unique
 class Country(str, enum.Enum):
     UA = "ukraine"
+    US = "united states"
+    # ALL = "all"
 
 class DataHelper:
     def __init__(self, file_name: str, url: str, temp_path: pathlib.Path):
@@ -44,8 +52,16 @@ class DataHelper:
 
 
 def download_data(url):
-    response = requests.get(url)
-    return response.content
+    res = io.BytesIO()
+    response = requests.get(url, stream=True, allow_redirects=True)
+    total = int(response.headers.get('content-length', 0))
+    with tqdm(unit="B", unit_scale=True, unit_divisor=1024, desc=f"Downloading data from {url}", total=total) as t:
+        for dat in response.iter_content(chunk_size=1024):
+            t.update(len(dat))
+            res.write(dat)
+    # response = requests.get(url)
+    res.seek(0)
+    return res.read()
 
 def save_data(data: bytes, file_path: pathlib.Path):
     with open(f"{file_path}", "wb") as file:
@@ -206,12 +222,14 @@ def init(country: Country, temp_path: str):
     path = pathlib.Path(temp_path).resolve()
     click.echo(f"Saving data to {path}")
     path.mkdir(parents=True, exist_ok=True)
-    geonames_datahelper = DataHelper(file_name=f"geonames_{country.name}", url=GEONAME_URL.format(country_name=country.name), temp_path=path)
+    geonames_url = GEONAME_URL.format(country_name=country.name)
+    alternatename_url = ALTERNATENAME.format(country_name=country.name)
+    geonames_datahelper = DataHelper(file_name=f"geonames_{country.name}", url=geonames_url, temp_path=path)
     geonames_data = download_data(geonames_datahelper.url)
     save_data(geonames_data, file_path=geonames_datahelper.file_path)
     unzip_data(file_path=geonames_datahelper.file_path)
 
-    alternatename_datahelper = DataHelper(file_name=f"alternatename_{country.name}", url=ALTERNATENAME.format(country_name=country.name), temp_path=path)
+    alternatename_datahelper = DataHelper(file_name=f"alternatename_{country.name}", url=alternatename_url, temp_path=path)
     alternatename_data = download_data(alternatename_datahelper.url)
     save_data(alternatename_data, file_path=alternatename_datahelper.file_path)
     unzip_data(file_path=alternatename_datahelper.file_path)
