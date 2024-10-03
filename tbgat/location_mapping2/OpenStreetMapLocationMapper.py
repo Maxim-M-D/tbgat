@@ -138,7 +138,7 @@ class OSMMapper:
             for itm in alternatenames:
                 c.execute(GEONAME_BY_ID_SQL, (itm.geonameid,))
                 osms.extend([OSMExtract.model_validate(dict(i)) for i in c.fetchall()])
-        return max(osms, key=lambda x: x.population)
+        return max(osms, key=lambda x: x.population) if osms else None
 
     
     def find_adm1_from_osmfeature(self, feature: OSMMapping, word: str):
@@ -173,6 +173,8 @@ class OSMMapper:
             geoname_ids = self._query_alternatename_by_word(span.word)
             alternatenames = self._query_alternatenames_by_geonameid(geoname_ids)
             osms = self._query_geonames(alternatenames)
+            if not osms:
+                continue
             found_geoms = self.combine_osm_extract_with_alternatenames(osms, alternatenames)
             found_adm1 = self.find_adm1_from_osmfeature(found_geoms, span.word)
             if found_adm1:
