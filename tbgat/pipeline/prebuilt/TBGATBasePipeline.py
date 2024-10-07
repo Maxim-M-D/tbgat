@@ -5,10 +5,11 @@ from tbgat.language_detection import (
     LinguaLanguageDetectionResult,
 )
 from tbgat.location_mapping2 import OSMMapper
+from tbgat.location_mapping2.OpenStreetMapModels import OSMMapping
 from tbgat.pipeline import Pipeline, component
 from tbgat.Preprocessor import PreProcessor
 from tbgat.shared import PostProcessingReturnType, SpanSet
-from tbgat.special_case_matcher import SpecialCaseMatcher
+from tbgat.shared.Span import Span
 
 
 class TBGATBasePipeline(Pipeline):
@@ -43,17 +44,8 @@ class TBGATBasePipeline(Pipeline):
     @staticmethod
     @location_mapper.executor
     def map_locations(
-        cmp: OSMMapper, inpt: SpanSet
-    ) -> List[PostProcessingReturnType]:
+        cmp: OSMMapper, inpt: Span
+    ) -> OSMMapping | None:
         return cmp.map_locations(inpt)
 
-    @component
-    def special_case_matcher() -> SpecialCaseMatcher:
-        return SpecialCaseMatcher()
 
-    @staticmethod
-    @special_case_matcher.executor
-    def match_special_cases(
-        cmp: SpecialCaseMatcher, inpt: SpanSet
-    ) -> List[PostProcessingReturnType]:
-        return cmp.match(inpt)

@@ -5,14 +5,9 @@ import shapely
 
 from tbgat.location_mapping2.OpenStreetMapModels import AlternateName, AlternateNameExtract, OSMExtract, OSMMapping
 from tbgat.shared.PostProcessingReturnType import PostProcessingReturnType
-from tbgat.shared.Span import SpanSet
+from tbgat.shared.Span import Span, SpanSet
 import geopandas as gpd
 import pandas as pd
-import pkg_resources
-
-get_file_path = lambda x: pkg_resources.resource_filename(
-    "tbgat", f"location_mapping2/data/{x}"
-)
 
 ALTERNATENAME_BY_NAME_SQL = '''
         SELECT 
@@ -45,27 +40,7 @@ class OSMMapper:
         threshold: float
             The importance of the feature. E.g. Munich might be an feature when querying for \"Munich, Ukraine\". High importance scores remove less important features.
         """
-        self._read_adm1_geojson()
         self.threshold = threshold
-
-    def _read_adm1_geojson(self):
-        """Reads the geojson file containing the ADM1 boundaries of Ukraine and merges Kyiv and Kyiv Oblast into one polygon."""
-        path = get_file_path("geoBoundaries-UKR-ADM1.geojson")
-        self.adm1: gpd.GeoDataFrame = gpd.read_file(
-            path
-        )
-        kyiv_oblast = self.adm1[self.adm1["shapeName"] == "Kyiv Oblast"]
-        kyiv = self.adm1[self.adm1["shapeName"] == "Kyiv"]
-        kyiv_oblast["geometry"] = (
-            kyiv_oblast["geometry"].iloc[0].union(kyiv["geometry"].iloc[0])
-        )
-        self.adm1: gpd.GeoDataFrame = cast(
-            gpd.GeoDataFrame,
-            self.adm1[~self.adm1["shapeName"].isin(["Kyiv", "Kyiv Oblast"])],
-        )
-        self.adm1 = gpd.GeoDataFrame(
-            pd.concat([self.adm1, kyiv_oblast], ignore_index=True)
-        )
 
     def combine_osm_extract_with_alternatenames(self, osm_extract: OSMExtract, alternatenames: list[AlternateName]) -> OSMMapping:
         alternatenames_dict = {name.geonameid: name for name in alternatenames}
@@ -140,43 +115,20 @@ class OSMMapper:
                 osms.extend([OSMExtract.model_validate(dict(i)) for i in c.fetchall()])
         return max(osms, key=lambda x: x.population) if osms else None
 
-    
-    def find_adm1_from_osmfeature(self, feature: OSMMapping, word: str):
-        polygon = shapely.geometry.point.Point(feature.longitude, feature.latitude)
-        found_adms = self.adm1[self.adm1["geometry"].contains(polygon)]  # type: ignore
-        return set(
-            [
-                PostProcessingReturnType(
-                    adm1=adm1.shapeName,
-                    name=feature.name,
-                    name_en=feature.name_en,
-                    word=word,
-                    type=feature.feature_name,
-                    latitude=feature.latitude,
-                    longitude=feature.longitude,
-                    relevance=0.0,
-                    population=feature.population, 
-                )
-                for _, adm1 in found_adms.iterrows()
-            ]
-        )
     def map(self, word: str):
         geoname_ids = self._query_alternatename_by_word(word)
         alternatenames = self._query_alternatenames_by_geonameid(geoname_ids)
         osms = self._query_geonames(alternatenames)
+        if osms is None:
+            return None
         found_geoms = self.combine_osm_extract_with_alternatenames(osms, alternatenames)
         return found_geoms
 
-    def map_locations(self, locations: SpanSet):
-        found_adm1s: set[PostProcessingReturnType] = set()
-        for span in locations:
-            geoname_ids = self._query_alternatename_by_word(span.word)
-            alternatenames = self._query_alternatenames_by_geonameid(geoname_ids)
-            osms = self._query_geonames(alternatenames)
-            if not osms:
-                continue
-            found_geoms = self.combine_osm_extract_with_alternatenames(osms, alternatenames)
-            found_adm1 = self.find_adm1_from_osmfeature(found_geoms, span.word)
-            if found_adm1:
-                found_adm1s = found_adm1s.union(found_adm1)
-        return list(found_adm1s)
+    def map_locations(self, span: Span):
+        geoname_ids = self._query_alternatename_by_word(span.word)
+        alternatenames = self._query_alternatenames_by_geonameid(geoname_ids)
+        osms = self._query_geonames(alternatenames)
+        if osms is None:
+            return None
+        found_geom = self.combine_osm_extract_with_alternatenames(osms, alternatenames)
+        return found_geom

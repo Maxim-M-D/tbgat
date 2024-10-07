@@ -67,7 +67,7 @@ class AhoCorasickMatcher:
                     start=start_idx,
                     end=end_idx,
                     entity="location",
-                    word=self.lower(self.remove_punct(city)),
+                    word=self.remove_punct(city),
                 )
                 spans.add(span)
         return spans

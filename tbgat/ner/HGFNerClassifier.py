@@ -94,7 +94,7 @@ class HuggingFaceNERClassifier:
                         entity=cast(str, ent["entity_group"]).strip(),
                         start=ent["start"],
                         end=ent["end"],
-                        word=self.lower(self.remove_punct(ent["word"]).strip()),
+                        word=self.remove_punct(ent["word"]).strip(),
                         score=ent["score"],
                     )
                     for ent in pred

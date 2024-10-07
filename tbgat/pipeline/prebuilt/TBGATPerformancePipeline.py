@@ -1,12 +1,17 @@
-from typing import Literal
+from typing import List, Literal
 import pandas as pd
 
 from tbgat.language_detection import LinguaLanguageDetectionResult
+from tbgat.location_mapping2.OpenStreetMapModels import OSMMapping
 from tbgat.pattern_matching import AhoCorasickMatcher
 from tbgat.pipeline import MultilingualResponse, component
 from tbgat.pipeline.prebuilt.TBGATBasePipeline import TBGATBasePipeline
+from tbgat.postprocessing.ADM1Mapper import ADM1Mapper
 from tbgat.shared import PostProcessingReturnType, SpanSet
+from tbgat.postprocessing.SpecialCaseMatcher import SpecialCaseMatcher
 import pkg_resources
+
+from tbgat.shared.Span import Span
 
 get_file_path = lambda x: pkg_resources.resource_filename("tbgat", f"pattern_matching/generated_data/{x}")
 
@@ -47,6 +52,28 @@ class TBGATPerformancePipeline(TBGATBasePipeline):
         inpt: LinguaLanguageDetectionResult,
     ) -> SpanSet:
         return cmp[inpt.lang].match(inpt.tweet)
+    
+    @component
+    def adm1mapper() -> ADM1Mapper:
+        return ADM1Mapper()
+    
+    @staticmethod
+    @adm1mapper.executor
+    def map_to_adm1(
+        cmp: ADM1Mapper, inpt: OSMMapping, word: str
+    ) -> List[PostProcessingReturnType]:
+        return list(cmp.find_adm1_from_osmfeature(inpt, word))
+    
+    @component
+    def special_case_matcher() -> SpecialCaseMatcher:
+        return SpecialCaseMatcher()
+
+    @staticmethod
+    @special_case_matcher.executor
+    def match_special_cases(
+        cmp: SpecialCaseMatcher, inpt: Span
+    ) -> List[PostProcessingReturnType]:
+        return cmp.match(inpt)
 
     def run(self, tweet: str) -> list[PostProcessingReturnType]:
         tweet = self.preprocess(tweet)
@@ -54,8 +81,12 @@ class TBGATPerformancePipeline(TBGATBasePipeline):
         res: set[PostProcessingReturnType] = set()
         for split in splitted:
             regex = self.match_patterns(split)
-            osm = self.map_locations(regex)
-            res.update(osm)
-            spec_case = self.match_special_cases(regex)
-            res.update(spec_case)
+            for span in regex:
+                osm = self.map_locations(span)
+                if osm is None:
+                    continue
+                adm1 = self.map_to_adm1(osm, span.word)
+                res.update(adm1)
+                spec_case = self.match_special_cases(span)
+                res.update(spec_case)
         return list(res)

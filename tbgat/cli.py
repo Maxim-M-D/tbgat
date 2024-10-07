@@ -214,6 +214,22 @@ def main():
     ...
 
 @main.command()
+def clear():
+    with sqlite3.connect('osm.db') as conn:
+        c = conn.cursor()
+        c.execute('''
+        DROP TABLE IF EXISTS geoname
+        ''')
+        c.execute('''
+        DROP TABLE IF EXISTS alternatename
+        ''')
+        c.execute('''
+        DROP TABLE IF EXISTS featurecodes
+        ''')
+        conn.commit()
+    click.echo("Tables dropped successfully")
+
+@main.command()
 @click.option("--country", "-c", help="Country to get data for. Defaults to ukraine", default="ukraine", type=click.Choice(Country), show_default=True, required=True)
 @click.option("--temp-path", "-t", help="Path to save the data to", default="temp", show_default=True)
 def init(country: Country, temp_path: str):

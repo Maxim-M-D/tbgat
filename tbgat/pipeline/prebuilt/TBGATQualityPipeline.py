@@ -3,14 +3,19 @@ from typing import List, Literal
 import pandas as pd
 
 from tbgat.language_detection import LinguaLanguageDetectionResult
+from tbgat.location_mapping2.OpenStreetMapModels import OSMMapping
 from tbgat.ner.HGFNerClassifier import HuggingFaceNERClassifier
 from tbgat.pattern_matching import AhoCorasickMatcher
 from tbgat.pipeline import MultilingualResponse, component
 from tbgat.pipeline.prebuilt.TBGATBasePipeline import TBGATBasePipeline
+from tbgat.postprocessing.ADM1Mapper import ADM1Mapper
 from tbgat.shared import PostProcessingReturnType, SpanSet
 from tbgat.pipeline.prebuilt.TBGATBasePipeline import TBGATBasePipeline
+from tbgat.postprocessing.SpecialCaseMatcher import SpecialCaseMatcher
 
 import pkg_resources
+
+from tbgat.shared.Span import Span
 
 get_file_path = lambda x: pkg_resources.resource_filename("tbgat", f"pattern_matching/generated_data/{x}")
 
@@ -69,17 +74,27 @@ class TBGATQualityPipeline(TBGATBasePipeline):
     ) -> SpanSet:
         return cmp[inpt.lang].predict(inpt.tweet)
     
-    # @staticmethod
-    # @ner_classifier.executor
-    # def ner_classify(
-    #     cmp: MultilingualResponse[HuggingFaceNERClassifier],
-    #     inpt: List[LinguaLanguageDetectionResult],
-    #     lang: str
-    # ) -> List[SpanSet]:
-    #     if inpt:
-    #         return cmp[lang].predict([x.tweet for x in inpt])
-    #     return []
-        
+    @component
+    def adm1mapper() -> ADM1Mapper:
+        return ADM1Mapper()
+    
+    @staticmethod
+    @adm1mapper.executor
+    def map_to_adm1(
+        cmp: ADM1Mapper, inpt: OSMMapping, word: str
+    ) -> List[PostProcessingReturnType]:
+        return list(cmp.find_adm1_from_osmfeature(inpt, word))
+    
+    @component
+    def special_case_matcher() -> SpecialCaseMatcher:
+        return SpecialCaseMatcher()
+
+    @staticmethod
+    @special_case_matcher.executor
+    def match_special_cases(
+        cmp: SpecialCaseMatcher, inpt: Span
+    ) -> List[PostProcessingReturnType]:
+        return cmp.match(inpt)
 
     def run(self, tweet: str) -> list[PostProcessingReturnType]:
         tweet = self.preprocess(tweet)
@@ -89,10 +104,14 @@ class TBGATQualityPipeline(TBGATBasePipeline):
             regex = self.match_patterns(split)
             ner = self.ner_classify(split)
             combined = regex + ner
-            osm = self.map_locations(combined)
-            res.update(osm)
-            spec_case = self.match_special_cases(regex)
-            res.update(spec_case)
+            for span in combined:
+                osm = self.map_locations(span)
+                if osm is None:
+                    continue
+                adm1 = self.map_to_adm1(osm, span.word)
+                res.update(adm1)
+                spec_case = self.match_special_cases(span)
+                res.update(spec_case)
         return list(res)
 
 """     def run_in_parallel(self, df: pd.DataFrame, column: str) -> pd.DataFrame:

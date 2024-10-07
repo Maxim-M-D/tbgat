@@ -1,4 +1,5 @@
 from tbgat.shared import PostProcessingReturnType, SpanSet
+from tbgat.shared.Span import Span
 
 
 class SpecialCaseMatcher:
@@ -102,7 +103,7 @@ class SpecialCaseMatcher:
     }
 
     @staticmethod
-    def match(span: SpanSet) -> list[PostProcessingReturnType]:
+    def match(span: Span) -> list[PostProcessingReturnType]:
         """Matches special cases in the span.
 
         Args:
@@ -112,26 +113,25 @@ class SpecialCaseMatcher:
             list[PostProcessingReturnType]: A list of PostProcessingReturnType objects. Each object represents a special case.
         """
         res: set[PostProcessingReturnType] = set()
-        for s in span:
-            if s.word.lower() in SpecialCaseMatcher._special_cases.keys():
-                res.add(
-                    PostProcessingReturnType(
-                        adm1=SpecialCaseMatcher._special_cases[s.word.lower()]["adm1"],
-                        name=SpecialCaseMatcher._special_cases[s.word.lower()]["name"],
-                        name_en=SpecialCaseMatcher._special_cases[s.word.lower()][
-                            "name_en"
-                        ],
-                        word=s.word,
-                        type=SpecialCaseMatcher._special_cases[s.word.lower()]["type"],
-                        latitude=SpecialCaseMatcher._special_cases[s.word.lower()][
-                            "latitude"
-                        ],
-                        longitude=SpecialCaseMatcher._special_cases[s.word.lower()][
-                            "longitude"
-                        ],
-                        relevance=SpecialCaseMatcher._special_cases[s.word.lower()][
-                            "relevance"
-                        ],
-                    )
+        if span.word.lower() in SpecialCaseMatcher._special_cases.keys():
+            res.add(
+                PostProcessingReturnType(
+                    adm1=SpecialCaseMatcher._special_cases[span.word.lower()]["adm1"],
+                    name=SpecialCaseMatcher._special_cases[span.word.lower()]["name"],
+                    name_en=SpecialCaseMatcher._special_cases[span.word.lower()][
+                        "name_en"
+                    ],
+                    word=span.word,
+                    type=SpecialCaseMatcher._special_cases[span.word.lower()]["type"],
+                    latitude=SpecialCaseMatcher._special_cases[span.word.lower()][
+                        "latitude"
+                    ],
+                    longitude=SpecialCaseMatcher._special_cases[span.word.lower()][
+                        "longitude"
+                    ],
+                    relevance=SpecialCaseMatcher._special_cases[span.word.lower()][
+                        "relevance"
+                    ],
                 )
+            )
         return list(res)

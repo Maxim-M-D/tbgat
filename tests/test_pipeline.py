@@ -20,6 +20,18 @@ def test_pickling():
     assert cache is not None
 
 
+def test_standard_pipeline():
+    pipeline = TBGATPerformancePipeline(size="small")
+    res = pipeline.run("I live near Kiev")
+    assert len(res) == 1
+    assert res[0].word == "Kiev"
+
+def test_qual_pipeline():
+    pipeline = TBGATQualityPipeline(size="small")
+    res = pipeline.run("I live near Kiev")
+    assert len(res) == 1
+    assert res[0].word == "Kiev"
+
 def f(pipeline):
     print(f"pipeline state in worker: {pipeline.__dict__}")
     cache = getattr(pipeline.preprocessor, "_cache")
