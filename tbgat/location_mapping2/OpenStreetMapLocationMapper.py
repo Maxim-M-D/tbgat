@@ -1,5 +1,5 @@
 import sqlite3
-from typing import Iterable, cast
+from typing import Iterable, List, cast
 
 import shapely
 
@@ -29,6 +29,16 @@ GEONAME_BY_ID_SQL = '''
         LEFT JOIN featurecodes f
         on g.feature_class || '.' || g.feature_code = f.code
         WHERE g.geonameid = ?
+        '''
+
+GEONAME_BY_ID_WITH_FEATURE_CLASS_SQL = '''
+        SELECT 
+        *,
+        f.name as feature_name
+        FROM geoname g
+        LEFT JOIN featurecodes f
+        on g.feature_class || '.' || g.feature_code = f.code
+        WHERE g.geonameid = {} and g.feature_class in ('{}')
         '''
 
 class OSMMapper:
@@ -104,14 +114,17 @@ class OSMMapper:
         unique_alternatenames = self.unique_alternatenames_from_extract(res)
         return unique_alternatenames
     
-    def _query_geonames(self, alternatenames: list[AlternateName]):
+    def _query_geonames(self, alternatenames: list[AlternateName], feature_classes: List[str] | None = None):
         with sqlite3.connect("osm.db") as conn:
             osms: list[OSMExtract] = []
             c = conn.cursor()
             conn.row_factory = sqlite3.Row
             c.row_factory = conn.row_factory
             for itm in alternatenames:
-                c.execute(GEONAME_BY_ID_SQL, (itm.geonameid,))
+                if not feature_classes:
+                    c.execute(GEONAME_BY_ID_SQL, (itm.geonameid, tuple()))
+                else:
+                    c.execute(GEONAME_BY_ID_WITH_FEATURE_CLASS_SQL.format(itm.geonameid, "','".join(feature_classes)))
                 osms.extend([OSMExtract.model_validate(dict(i)) for i in c.fetchall()])
         return max(osms, key=lambda x: x.population) if osms else None
 
@@ -124,10 +137,10 @@ class OSMMapper:
         found_geoms = self.combine_osm_extract_with_alternatenames(osms, alternatenames)
         return found_geoms
 
-    def map_locations(self, span: Span):
+    def map_locations(self, span: Span, feature_classes: List[str] | None = None):
         geoname_ids = self._query_alternatename_by_word(span.word)
         alternatenames = self._query_alternatenames_by_geonameid(geoname_ids)
-        osms = self._query_geonames(alternatenames)
+        osms = self._query_geonames(alternatenames, feature_classes=feature_classes)
         if osms is None:
             return None
         found_geom = self.combine_osm_extract_with_alternatenames(osms, alternatenames)

@@ -44,8 +44,8 @@ class TBGATBasePipeline(Pipeline):
     @staticmethod
     @location_mapper.executor
     def map_locations(
-        cmp: OSMMapper, inpt: Span
+        cmp: OSMMapper, inpt: Span, feature_classes: List[str] | None = None
     ) -> OSMMapping | None:
-        return cmp.map_locations(inpt)
+        return cmp.map_locations(inpt, feature_classes=feature_classes)
 
 

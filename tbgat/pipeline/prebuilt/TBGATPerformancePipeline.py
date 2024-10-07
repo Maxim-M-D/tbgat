@@ -75,14 +75,14 @@ class TBGATPerformancePipeline(TBGATBasePipeline):
     ) -> List[PostProcessingReturnType]:
         return cmp.match(inpt)
 
-    def run(self, tweet: str) -> list[PostProcessingReturnType]:
+    def run(self, tweet: str, feature_classes: List[str] | None = ["A", "P"]) -> list[PostProcessingReturnType]:
         tweet = self.preprocess(tweet)
         splitted = self.detect_language(tweet)
         res: set[PostProcessingReturnType] = set()
         for split in splitted:
             regex = self.match_patterns(split)
             for span in regex:
-                osm = self.map_locations(span)
+                osm = self.map_locations(span, feature_classes=feature_classes)
                 if osm is None:
                     continue
                 adm1 = self.map_to_adm1(osm, span.word)
