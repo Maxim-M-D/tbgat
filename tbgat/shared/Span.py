@@ -91,4 +91,12 @@ class SpanSet(Set[Span]):
         return __default
 
     def __add__(self, other: SpanSet) -> SpanSet:
-        return SpanSet(self.union(other))
+        # combine two spansets into one by always taking the span, that has the highest range. E.g. if one has start=4, end=5 and the other start=4, end=6, take the one with start=4, end=6
+        combined = self.union(other)
+        cursor = {}
+        for span in combined:
+            if span.start in cursor:
+                if span.end > cursor[span.start].end:
+                    cursor[span.start] = span
+            cursor[span.start] = span
+        return SpanSet(cursor.values())

@@ -61,8 +61,8 @@ class TBGATPerformancePipeline(TBGATBasePipeline):
     @adm1mapper.executor
     def map_to_adm1(
         cmp: ADM1Mapper, inpt: OSMMapping, word: str
-    ) -> List[PostProcessingReturnType]:
-        return list(cmp.find_adm1_from_osmfeature(inpt, word))
+    ) -> PostProcessingReturnType | None:
+        return cmp.find_adm1_from_osmfeature(inpt, word)
     
     @component
     def special_case_matcher() -> SpecialCaseMatcher:
@@ -86,7 +86,8 @@ class TBGATPerformancePipeline(TBGATBasePipeline):
                 if osm is None:
                     continue
                 adm1 = self.map_to_adm1(osm, span.word)
-                res.update(adm1)
+                if adm1 is not None:
+                    res.update([adm1])
                 spec_case = self.match_special_cases(span)
                 res.update(spec_case)
         return list(res)

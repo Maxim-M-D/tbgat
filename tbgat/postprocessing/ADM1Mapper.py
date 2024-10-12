@@ -5,7 +5,6 @@ from tbgat.shared.PostProcessingReturnType import PostProcessingReturnType
 import geopandas as gpd
 import pandas as pd
 from typing import cast
-
 import pkg_resources
 
 get_file_path = lambda x: pkg_resources.resource_filename(
@@ -38,19 +37,22 @@ class ADM1Mapper:
     def find_adm1_from_osmfeature(self, feature: OSMMapping, word: str):
         polygon = shapely.geometry.point.Point(feature.longitude, feature.latitude)
         found_adms = self.adm1[self.adm1["geometry"].contains(polygon)]  # type: ignore
-        return set(
-            [
-                PostProcessingReturnType(
-                    adm1=adm1.shapeName,
-                    name=feature.name,
-                    name_en=feature.name_en,
-                    word=word,
-                    type=feature.feature_name,
-                    latitude=feature.latitude,
-                    longitude=feature.longitude,
-                    relevance=0.0,
-                    population=feature.population, 
-                )
-                for _, adm1 in found_adms.iterrows()
-            ]
-        )
+        # calculate which adm1 is the closest to the feature in terms of distance
+        if not found_adms.empty:
+            found_adms["centroid_distance"] = found_adms["geometry"].centroid.apply(
+                lambda x: polygon.distance(x)
+            )
+            closest_adm_centroid = found_adms.loc[found_adms["centroid_distance"].idxmin()]
+
+            return PostProcessingReturnType(
+                adm1=closest_adm_centroid.shapeName,
+                name=feature.name,
+                name_en=feature.name_en,
+                word=word,
+                type=feature.feature_name,
+                latitude=feature.latitude,
+                longitude=feature.longitude,
+                relevance=0.0,
+                population=feature.population,
+            )
+        return None

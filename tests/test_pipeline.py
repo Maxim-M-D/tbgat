@@ -19,18 +19,43 @@ def test_pickling():
     cache = getattr(pipeline.preprocessor, "_cache")
     assert cache is not None
 
+@pytest.mark.parametrize(
+        "tweet,size,expected_words,expected_adm1s",
+        [
+            ("I live near Kiev", 1, ["Kiev"], ["Kyiv Oblast"]),
+            ("I live near Bucha", 1, ["Bucha"], ["Kyiv Oblast"]),
+            ("Morning ☕️ @ Bucha, Kiev Oblast https://t.co/8KuvBuGwjN", 2, ["Bucha","Kiev"], ["Kyiv Oblast", "Kyiv Oblast"]),
+            ("\"«❗All the photos and videos published by the Kiev regime allegedly testifying to some ""crimes"" committed by Russian servicemen in Bucha, Kiev region are just another provocation.»https://t.co/PMupyBDsUY\"", 2, ["Bucha", "Kiev"], ["Kyiv Oblast", "Kyiv Oblast"]),
+            ("""I Have no Hate, Only Love"" - Family Buries Their Loved One in Bucha after Anya, 56, was shot in the head and left for dead on the street on March 20 #Ukraine #Bucha
 
-def test_standard_pipeline():
+Full video https://t.co/7OnaPXHCu7 https://t.co/mOHOWno6ln""", 1, ["Bucha"], ["Kyiv Oblast"]), # Ukraine is not in the gazetteer
+        ]
+)
+def test_standard_pipeline(tweet: str, size: int, expected_words: list[str], expected_adm1s: list[str]):
     pipeline = TBGATPerformancePipeline(size="small")
-    res = pipeline.run("I live near Kiev")
-    assert len(res) == 1
-    assert res[0].word == "Kiev"
+    res = pipeline.run(tweet)
+    assert len(res) == size
+    assert res[0].word in expected_words
+    assert res[0].adm1 in expected_adm1s
 
-def test_qual_pipeline():
+@pytest.mark.parametrize(
+        "tweet,size,expected_words,expected_adm1s",
+        [
+            ("I live near Kiev", 1, ["Kiev"], ["Kyiv Oblast"]),
+            ("I live near Bucha", 1, ["Bucha"], ["Kyiv Oblast"]),
+            ("Morning ☕️ @ Bucha, Kiev Oblast https://t.co/8KuvBuGwjN", 2, ["Bucha","Kiev"], ["Kyiv Oblast", "Kyiv Oblast"]),
+            ("\"«❗All the photos and videos published by the Kiev regime allegedly testifying to some ""crimes"" committed by Russian servicemen in Bucha, Kiev region are just another provocation.»https://t.co/PMupyBDsUY\"", 2, ["Bucha", "Kiev"], ["Kyiv Oblast", "Kyiv Oblast"]),
+            ("""I Have no Hate, Only Love"" - Family Buries Their Loved One in Bucha after Anya, 56, was shot in the head and left for dead on the street on March 20 #Ukraine #Bucha
+
+Full video https://t.co/7OnaPXHCu7 https://t.co/mOHOWno6ln""", 1, ["Bucha"], ["Kyiv Oblast"]), # ukraine not found by ner in this case
+        ]
+)
+def test_qual_pipeline(tweet: str, size: int, expected_words: list[str], expected_adm1s: list[str]):
     pipeline = TBGATQualityPipeline(size="small")
-    res = pipeline.run("I live near Kiev")
-    assert len(res) == 1
-    assert res[0].word == "Kiev"
+    res = pipeline.run(tweet)
+    assert len(res) == size
+    assert res[0].word in expected_words
+    assert res[0].adm1 in expected_adm1s
 
 def f(pipeline):
     print(f"pipeline state in worker: {pipeline.__dict__}")
