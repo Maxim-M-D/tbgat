@@ -85,6 +85,7 @@ class TBGATQualityPipeline(TBGATBasePipeline):
     ) -> PostProcessingReturnType | None:
         return cmp.find_adm1_from_osmfeature(inpt, word)
     
+    """     
     @component
     def special_case_matcher() -> SpecialCaseMatcher:
         return SpecialCaseMatcher()
@@ -94,7 +95,8 @@ class TBGATQualityPipeline(TBGATBasePipeline):
     def match_special_cases(
         cmp: SpecialCaseMatcher, inpt: Span
     ) -> List[PostProcessingReturnType]:
-        return cmp.match(inpt)
+        return cmp.match(inpt) 
+    """
 
     def run(self, tweet: str, feature_classes: List[str] | None = ["A", "P"]) -> list[PostProcessingReturnType]:
         tweet = self.preprocess(tweet)
@@ -111,8 +113,6 @@ class TBGATQualityPipeline(TBGATBasePipeline):
                 adm1 = self.map_to_adm1(osm, span.word)
                 if adm1 is not None:
                     res.update([adm1])
-                spec_case = self.match_special_cases(span)
-                res.update(spec_case)
         return list(res)
 
 """     def run_in_parallel(self, df: pd.DataFrame, column: str) -> pd.DataFrame:

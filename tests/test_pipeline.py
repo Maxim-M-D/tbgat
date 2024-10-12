@@ -29,6 +29,13 @@ def test_pickling():
             ("""I Have no Hate, Only Love"" - Family Buries Their Loved One in Bucha after Anya, 56, was shot in the head and left for dead on the street on March 20 #Ukraine #Bucha
 
 Full video https://t.co/7OnaPXHCu7 https://t.co/mOHOWno6ln""", 1, ["Bucha"], ["Kyiv Oblast"]), # Ukraine is not in the gazetteer
+            ("""There are details of a missile attack on the Odesa region
+
+The invaders fired two Iskander missiles from the territory of Crimea, the Operational Command ""Pivden"" reports.
+
+It is also reported that the missiles exploded in the air...
+
+#russiaisateroriststate #Odesa #Ukraine https://t.co/LF8ZcnHnyI""", 2, ["Crimea", "Odesa"], ["Odesa Oblast", "Autonomous Republic of Crimea"]),
         ]
 )
 def test_standard_pipeline(tweet: str, size: int, expected_words: list[str], expected_adm1s: list[str]):
@@ -48,6 +55,13 @@ def test_standard_pipeline(tweet: str, size: int, expected_words: list[str], exp
             ("""I Have no Hate, Only Love"" - Family Buries Their Loved One in Bucha after Anya, 56, was shot in the head and left for dead on the street on March 20 #Ukraine #Bucha
 
 Full video https://t.co/7OnaPXHCu7 https://t.co/mOHOWno6ln""", 1, ["Bucha"], ["Kyiv Oblast"]), # ukraine not found by ner in this case
+            ("""There are details of a missile attack on the Odesa region
+
+The invaders fired two Iskander missiles from the territory of Crimea, the Operational Command ""Pivden"" reports.
+
+It is also reported that the missiles exploded in the air...
+
+#russiaisateroriststate #Odesa #Ukraine https://t.co/LF8ZcnHnyI""", 2, ["Crimea", "Odesa"], ["Odesa Oblast", "Autonomous Republic of Crimea"])
         ]
 )
 def test_qual_pipeline(tweet: str, size: int, expected_words: list[str], expected_adm1s: list[str]):
