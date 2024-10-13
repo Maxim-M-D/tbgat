@@ -2,7 +2,7 @@ from __future__ import annotations
 import re
 from typing import List, TypedDict
 
-from tbgat.shared import SpanSet, Span
+from tbgat._types import SpanSet, Span
 
 
 class Rule:

@@ -1,19 +1,19 @@
 from typing import List, Literal
 import pandas as pd
-
-from tbgat.language_detection import LinguaLanguageDetectionResult
-from tbgat.location_mapping2.OpenStreetMapModels import OSMMapping
+from functools import reduce
+from tbgat._types import Language, SpanSet, OSM
+from tbgat.postprocessing._types import ADM1, GeoDocWithADM1
 from tbgat.pattern_matching import AhoCorasickMatcher
 from tbgat.pipeline import MultilingualResponse, component
 from tbgat.pipeline.prebuilt.TBGATBasePipeline import TBGATBasePipeline
 from tbgat.postprocessing.ADM1Mapper import ADM1Mapper
-from tbgat.shared import PostProcessingReturnType, SpanSet
-from tbgat.postprocessing.SpecialCaseMatcher import SpecialCaseMatcher
 import pkg_resources
 
-from tbgat.shared.Span import Span
 
-get_file_path = lambda x: pkg_resources.resource_filename("tbgat", f"pattern_matching/generated_data/{x}")
+get_file_path = lambda x: pkg_resources.resource_filename(
+    "tbgat", f"pattern_matching/generated_data/{x}"
+)
+
 
 class TBGATPerformancePipeline(TBGATBasePipeline):
     """Pipeline for text-based geographical assignment of tweets. This pipeline is responsible for preprocessing, language detection, location mapping, special case matching, and pattern matching.
@@ -49,20 +49,19 @@ class TBGATPerformancePipeline(TBGATBasePipeline):
     @pattern_matcher.executor
     def match_patterns(
         cmp: MultilingualResponse[AhoCorasickMatcher],
-        inpt: LinguaLanguageDetectionResult,
+        inpt: Language,
     ) -> SpanSet:
-        return cmp[inpt.lang].match(inpt.tweet)
-    
+        return cmp[inpt.lang].match(inpt.text)
+
     @component
     def adm1mapper() -> ADM1Mapper:
         return ADM1Mapper()
-    
+
     @staticmethod
     @adm1mapper.executor
-    def map_to_adm1(
-        cmp: ADM1Mapper, inpt: OSMMapping, word: str
-    ) -> PostProcessingReturnType | None:
-        return cmp.find_adm1_from_osmfeature(inpt, word)
+    def map_to_adm1(cmp: ADM1Mapper, inpt: OSM) -> ADM1 | None:
+        return cmp.find_adm1_from_osmfeature(inpt)
+
     """     
     @component
     def special_case_matcher() -> SpecialCaseMatcher:
@@ -76,17 +75,21 @@ class TBGATPerformancePipeline(TBGATBasePipeline):
         return cmp.match(inpt) 
     """
 
-    def run(self, tweet: str, feature_classes: List[str] | None = ["A", "P"]) -> list[PostProcessingReturnType]:
+    def run(
+        self, tweet: str, feature_classes: List[str] | None = ["A", "P"]
+    ) -> GeoDocWithADM1:
         tweet = self.preprocess(tweet)
-        splitted = self.detect_language(tweet)
-        res: set[PostProcessingReturnType] = set()
-        for split in splitted:
-            regex = self.match_patterns(split)
-            for span in regex:
-                osm = self.map_locations(span, feature_classes=feature_classes)
-                if osm is None:
-                    continue
-                adm1 = self.map_to_adm1(osm, span.word)
-                if adm1 is not None:
-                    res.update([adm1])
-        return list(res)
+        languages = self.detect_language(tweet)
+        spans = reduce(lambda x, y: x | y, map(self.match_patterns, languages))
+        osms = list(
+            set(
+                filter(
+                    None, map(self.map_locations, spans, [feature_classes] * len(spans))
+                )
+            )
+        )
+        adm1s = list(filter(None, map(lambda osm: self.map_to_adm1(osm), osms)))
+        geodoc = GeoDocWithADM1(
+            text=tweet, language=languages, spans=list(spans), osm=osms, adm1=adm1s
+        )
+        return geodoc

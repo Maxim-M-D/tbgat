@@ -31,17 +31,3 @@ class OSMExtract(BaseModel):
     feature_code: str
     population: int
     
-
-class OSMMapping(BaseModel):
-    geonameid: int
-    name: str
-    latitude: float
-    longitude: float
-    feature_name: str
-    feature_class: str
-    feature_code: str
-    population: int
-    name_en: str
-    name_de: str
-    name_ru: str
-    name_ua: str

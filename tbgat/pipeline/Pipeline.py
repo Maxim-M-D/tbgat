@@ -12,6 +12,8 @@ from typing import (
 
 from dask.base import normalize_token
 
+from tbgat._types import GeoDoc
+
 _T = TypeVar("_T", covariant=True)
 _R = TypeVar("_R")
 _P = ParamSpec("_P")
@@ -19,7 +21,7 @@ _Q = ParamSpec("_Q")
 
 
 _PP = ParamSpec("_PP")
-_PR_cov = TypeVar("_PR_cov", covariant=True)
+_PR_cov = TypeVar("_PR_cov", bound=GeoDoc, covariant=True)
 
 
 class Executor(Generic[_Q, _R]):

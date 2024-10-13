@@ -1,13 +1,7 @@
 import sqlite3
-from typing import Iterable, List, cast
-
-import shapely
-
-from tbgat.location_mapping2.OpenStreetMapModels import AlternateName, AlternateNameExtract, OSMExtract, OSMMapping
-from tbgat.shared.PostProcessingReturnType import PostProcessingReturnType
-from tbgat.shared.Span import Span, SpanSet
-import geopandas as gpd
-import pandas as pd
+from typing import Iterable, List
+from tbgat.location_mapping2.OpenStreetMapModels import AlternateName, AlternateNameExtract, OSMExtract
+from tbgat._types import OSM, Span
 
 ALTERNATENAME_BY_NAME_SQL = '''
         SELECT 
@@ -52,9 +46,9 @@ class OSMMapper:
         """
         self.threshold = threshold
 
-    def combine_osm_extract_with_alternatenames(self, osm_extract: OSMExtract, alternatenames: list[AlternateName]) -> OSMMapping:
+    def combine_osm_extract_with_alternatenames(self, osm_extract: OSMExtract, alternatenames: list[AlternateName]) -> OSM:
         alternatenames_dict = {name.geonameid: name for name in alternatenames}
-        return OSMMapping(
+        return OSM(
             geonameid=osm_extract.geonameid,
             name=osm_extract.name,
             latitude=osm_extract.latitude,
@@ -137,7 +131,7 @@ class OSMMapper:
         found_geoms = self.combine_osm_extract_with_alternatenames(osms, alternatenames)
         return found_geoms
 
-    def map_locations(self, span: Span, feature_classes: List[str] | None = None):
+    def map_locations(self, span: Span, feature_classes: List[str] | None = None) -> OSM | None:
         geoname_ids = self._query_alternatename_by_word(span.word)
         alternatenames = self._query_alternatenames_by_geonameid(geoname_ids)
         osms = self._query_geonames(alternatenames, feature_classes=feature_classes)

@@ -4,7 +4,8 @@
 
 from typing import List
 from lingua import LanguageDetectorBuilder, Language, DetectionResult
-from ._types import LinguaLanguageDetectionResult, language_to_lang
+from .utils import language_to_lang
+from tbgat._types import Language as TBGATLanguage
 
 languages = [Language.ENGLISH, Language.RUSSIAN, Language.UKRAINIAN]
 detector = LanguageDetectorBuilder.from_languages(*languages).build()
@@ -16,7 +17,7 @@ class LinguaDetectionResultAdapter:
     @staticmethod
     def from_detection_result(
         tweet: str, detection_result: List[DetectionResult]
-    ) -> List[LinguaLanguageDetectionResult]:
+    ) -> List[TBGATLanguage]:
         """Converts Lingua detection results to LinguaLanguageDetectionResult objects.
 
         Args:
@@ -27,12 +28,7 @@ class LinguaDetectionResultAdapter:
             List[LinguaLanguageDetectionResult]: the converted detection results
         """
         return [
-            LinguaLanguageDetectionResult(
-                **{
-                    "tweet": tweet[res.start_index : res.end_index],
-                    "lang": language_to_lang.get(res.language, "en"),
-                }
-            )
+            TBGATLanguage(start=res.start_index, end=res.end_index, lang=language_to_lang.get(res.language, "en"), text=tweet[res.start_index : res.end_index])
             for res in detection_result
         ]
 
@@ -44,7 +40,7 @@ class LinguaLanguageDetection:
         """Initializes the LinguaLanguageDetection object."""
         ...
 
-    def detect_languages(self, tweet: str) -> List[LinguaLanguageDetectionResult]:
+    def detect_languages(self, tweet: str) -> List[TBGATLanguage]:
         """Detects the language of a tweet using the Lingua library.
 
         Args:

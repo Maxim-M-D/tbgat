@@ -1,7 +1,7 @@
 
 import shapely
-from tbgat.location_mapping2.OpenStreetMapModels import OSMMapping
-from tbgat.shared.PostProcessingReturnType import PostProcessingReturnType
+from tbgat._types import OSM
+from tbgat.postprocessing._types import ADM1
 import geopandas as gpd
 import pandas as pd
 from typing import cast
@@ -34,7 +34,7 @@ class ADM1Mapper:
             pd.concat([self.adm1, kyiv_oblast], ignore_index=True)
         )
 
-    def find_adm1_from_osmfeature(self, feature: OSMMapping, word: str):
+    def find_adm1_from_osmfeature(self, feature: OSM):
         polygon = shapely.geometry.point.Point(feature.longitude, feature.latitude)
         found_adms = self.adm1[self.adm1["geometry"].contains(polygon)]  # type: ignore
         # calculate which adm1 is the closest to the feature in terms of distance
@@ -44,15 +44,8 @@ class ADM1Mapper:
             )
             closest_adm_centroid = found_adms.loc[found_adms["centroid_distance"].idxmin()]
 
-            return PostProcessingReturnType(
+            return ADM1(
                 adm1=closest_adm_centroid.shapeName,
-                name=feature.name,
-                name_en=feature.name_en,
-                word=word,
-                type=feature.feature_name,
-                latitude=feature.latitude,
-                longitude=feature.longitude,
-                relevance=0.0,
-                population=feature.population,
+                location=feature.name,
             )
         return None

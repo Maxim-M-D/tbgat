@@ -1,23 +1,23 @@
-import time
+from functools import reduce
 from typing import List, Literal
 import pandas as pd
 
-from tbgat.language_detection import LinguaLanguageDetectionResult
-from tbgat.location_mapping2.OpenStreetMapModels import OSMMapping
 from tbgat.ner.HGFNerClassifier import HuggingFaceNERClassifier
 from tbgat.pattern_matching import AhoCorasickMatcher
 from tbgat.pipeline import MultilingualResponse, component
 from tbgat.pipeline.prebuilt.TBGATBasePipeline import TBGATBasePipeline
 from tbgat.postprocessing.ADM1Mapper import ADM1Mapper
-from tbgat.shared import PostProcessingReturnType, SpanSet
-from tbgat.pipeline.prebuilt.TBGATBasePipeline import TBGATBasePipeline
-from tbgat.postprocessing.SpecialCaseMatcher import SpecialCaseMatcher
+from tbgat._types import Language, SpanSet, OSM
+from tbgat.postprocessing._types import ADM1, GeoDocWithADM1
+
 
 import pkg_resources
 
-from tbgat.shared.Span import Span
 
-get_file_path = lambda x: pkg_resources.resource_filename("tbgat", f"pattern_matching/generated_data/{x}")
+get_file_path = lambda x: pkg_resources.resource_filename(
+    "tbgat", f"pattern_matching/generated_data/{x}"
+)
+
 
 class TBGATQualityPipeline(TBGATBasePipeline):
     """Pipeline for text-based geographical assignment of tweets. This pipeline is responsible for preprocessing, language detection, location mapping, special case matching, pattern matching, and named entity recognition.
@@ -52,9 +52,9 @@ class TBGATQualityPipeline(TBGATBasePipeline):
     @pattern_matcher.executor
     def match_patterns(
         cmp: MultilingualResponse[AhoCorasickMatcher],
-        inpt: LinguaLanguageDetectionResult,
+        inpt: Language,
     ) -> SpanSet:
-        return cmp[inpt.lang].match(inpt.tweet)
+        return cmp[inpt.lang].match(inpt.text)
 
     @component
     def ner_classifier() -> MultilingualResponse[HuggingFaceNERClassifier]:
@@ -70,88 +70,36 @@ class TBGATQualityPipeline(TBGATBasePipeline):
     @ner_classifier.executor
     def ner_classify(
         cmp: MultilingualResponse[HuggingFaceNERClassifier],
-        inpt: LinguaLanguageDetectionResult,
+        inpt: Language,
     ) -> SpanSet:
-        return cmp[inpt.lang].predict(inpt.tweet)
-    
+        return cmp[inpt.lang].predict(inpt.text)
+
     @component
     def adm1mapper() -> ADM1Mapper:
         return ADM1Mapper()
-    
+
     @staticmethod
     @adm1mapper.executor
-    def map_to_adm1(
-        cmp: ADM1Mapper, inpt: OSMMapping, word: str
-    ) -> PostProcessingReturnType | None:
-        return cmp.find_adm1_from_osmfeature(inpt, word)
-    
-    """     
-    @component
-    def special_case_matcher() -> SpecialCaseMatcher:
-        return SpecialCaseMatcher()
+    def map_to_adm1(cmp: ADM1Mapper, inpt: OSM) -> ADM1 | None:
+        return cmp.find_adm1_from_osmfeature(inpt)
 
-    @staticmethod
-    @special_case_matcher.executor
-    def match_special_cases(
-        cmp: SpecialCaseMatcher, inpt: Span
-    ) -> List[PostProcessingReturnType]:
-        return cmp.match(inpt) 
-    """
-
-    def run(self, tweet: str, feature_classes: List[str] | None = ["A", "P"]) -> list[PostProcessingReturnType]:
+    def run(
+        self, tweet: str, feature_classes: List[str] | None = ["A", "P"]
+    ) -> GeoDocWithADM1:
         tweet = self.preprocess(tweet)
-        splitted = self.detect_language(tweet)
-        res: set[PostProcessingReturnType] = set()
-        for split in splitted:
-            regex = self.match_patterns(split)
-            ner = self.ner_classify(split)
-            combined = regex + ner
-            for span in combined:
-                osm = self.map_locations(span, feature_classes=feature_classes)
-                if osm is None:
-                    continue
-                adm1 = self.map_to_adm1(osm, span.word)
-                if adm1 is not None:
-                    res.update([adm1])
-        return list(res)
-
-"""     def run_in_parallel(self, df: pd.DataFrame, column: str) -> pd.DataFrame:
-        assert column in df.columns
-        df_c = df.copy()
-        df_c["idx"] = df_c.index 
-        print("Preprocessing")
-        t1 = time.time()
-        df_c["tweet_cleaned"] = df_c[column].apply(self.preprocess)
-        print(f"Preprocessing took {time.time() - t1} seconds")
-        t1 = time.time()
-        print("Detecting language")
-        df_c["lang"] = df_c["tweet_cleaned"].apply(self.detect_language)
-        print(f"Language detection took {time.time() - t1} seconds")
-        df_c = df_c.explode("lang")
-        print("Matching patterns")
-        t1 = time.time()
-        df_c["patterns"] = df_c["lang"].apply(self.match_patterns)
-        print(f"Pattern matching took {time.time() - t1} seconds")
-        t1 = time.time()
-        df_c["ner"] = None
-        print("Classifying NER")
-        for lang in ["en", "ru", "uk"]:
-            df_c.loc[[x.lang == lang for x in df_c["lang"]], "ner"] = self.ner_classify(df_c[[x.lang == lang for x in df_c["lang"]]]["lang"].to_list(), lang=lang)
-        # df_c.iloc["ner"] = self.ner_classify(df_c["lang"].to_list(), lang="en")
-        print(f"NER classification took {time.time() - t1} seconds")
-        df_c["combined"] = df_c["patterns"] + df_c["ner"]
-        print("Mapping locations")
-        t1 = time.time()
-        df_c["osm"] = df_c["combined"].apply(self.map_locations)
-        print(f"Location mapping took {time.time() - t1} seconds")
-        t1 = time.time()
-        print("Matching special cases")
-        df_c["spec_case"] = df_c["patterns"].apply(self.match_special_cases)
-        print(f"Special case matching took {time.time() - t1} seconds")
-        print("Finishing up...")
-        df_c["result"] = df_c.apply(lambda x: list(set(x["osm"]) | set(x["spec_case"])), axis=1)
-        df.loc[:, "predicted"] = df_c.groupby("idx", as_index=False).agg({"result": lambda x: [item for sublist in x for item in sublist]})["result"]
-        return df
-
-        
- """
+        languages = self.detect_language(tweet)
+        rexs = reduce(lambda x, y: x | y, map(self.match_patterns, languages))
+        ners = reduce(lambda x, y: x | y, map(self.ner_classify, languages))
+        spans = SpanSet(rexs) + SpanSet(ners)
+        osms = list(
+            set(
+                filter(
+                    None, map(self.map_locations, spans, [feature_classes] * len(spans))
+                )
+            )
+        )
+        adm1s = list(filter(None, map(lambda osm: self.map_to_adm1(osm), osms)))
+        geodoc = GeoDocWithADM1(
+            text=tweet, language=languages, spans=list(spans), osm=osms, adm1=adm1s
+        )
+        return geodoc

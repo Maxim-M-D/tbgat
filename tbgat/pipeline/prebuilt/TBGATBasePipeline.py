@@ -2,14 +2,11 @@ from typing import List
 
 from tbgat.language_detection import (
     LinguaLanguageDetection,
-    LinguaLanguageDetectionResult,
 )
 from tbgat.location_mapping2 import OSMMapper
-from tbgat.location_mapping2.OpenStreetMapModels import OSMMapping
 from tbgat.pipeline import Pipeline, component
 from tbgat.Preprocessor import PreProcessor
-from tbgat.shared import PostProcessingReturnType, SpanSet
-from tbgat.shared.Span import Span
+from tbgat._types import Language, Span, OSM
 
 
 class TBGATBasePipeline(Pipeline):
@@ -34,7 +31,7 @@ class TBGATBasePipeline(Pipeline):
     @language_detector.executor
     def detect_language(
         cmp: LinguaLanguageDetection, inpt: str
-    ) -> List[LinguaLanguageDetectionResult]:
+    ) -> List[Language]:
         return cmp.detect_languages(inpt)
 
     @component
@@ -45,7 +42,7 @@ class TBGATBasePipeline(Pipeline):
     @location_mapper.executor
     def map_locations(
         cmp: OSMMapper, inpt: Span, feature_classes: List[str] | None = None
-    ) -> OSMMapping | None:
+    ) -> OSM | None:
         return cmp.map_locations(inpt, feature_classes=feature_classes)
 
 

@@ -1,6 +1,6 @@
 from typing import List, cast, overload
 from logging import info
-from tbgat.shared import Span, SpanSet
+from tbgat._types import Span, SpanSet
 
 try:
     import torch

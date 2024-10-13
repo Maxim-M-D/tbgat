@@ -3,7 +3,7 @@ import string
 from typing import List
 import ahocorasick
 
-from tbgat.shared import Span, SpanSet
+from tbgat._types import Span, SpanSet
 
 
 class AhoCorasickMatcher:
