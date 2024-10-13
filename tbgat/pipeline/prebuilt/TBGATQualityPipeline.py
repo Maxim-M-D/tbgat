@@ -99,7 +99,6 @@ class TBGATQualityPipeline(TBGATBasePipeline):
     """
 
     def run(self, tweet: str, feature_classes: List[str] | None = ["A", "P"]) -> list[PostProcessingReturnType]:
-        assert isinstance(tweet, str), f"Expected 'tweet' to be of type 'str', but got {type(tweet).__name__} instead."
         tweet = self.preprocess(tweet)
         splitted = self.detect_language(tweet)
         res: set[PostProcessingReturnType] = set()
