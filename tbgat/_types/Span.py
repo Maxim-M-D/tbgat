@@ -1,5 +1,18 @@
 from __future__ import annotations
 from typing import Set, TypeVar, overload
+from itertools import permutations, starmap
+
+
+class Line:
+    def __init__(self, start: int, end: int):
+        self.start = start
+        self.end = end
+
+    def __hash__(self) -> int:
+        return hash((self.start, self.end))
+
+    def __contains__(self, other: Line) -> bool:
+        return self.start <= other.start and self.end >= other.end
 
 
 class Span:
@@ -25,6 +38,10 @@ class Span:
         self.entity = entity
         self.word = word
         self.score = score
+
+    @property
+    def range(self) -> Line:
+        return Line(self.start, self.end)
 
     def __hash__(self) -> int:
         return hash((self.start, self.end, self.entity, self.word, self.score))
@@ -64,7 +81,9 @@ T = TypeVar("T")
 class SpanSet(Set[Span]):
     """SpanSet class. Represents a set of spans. This class is a wrapper around the Set class, that means items are unique."""
 
-    def __contains__(self, __key: Span) -> bool:
+    def __contains__(self, __key: object) -> bool:
+        if not isinstance(__key, Span):
+            return False
         for span in self:
             if span == __key:
                 return True
@@ -91,12 +110,11 @@ class SpanSet(Set[Span]):
         return __default
 
     def __add__(self, other: SpanSet) -> SpanSet:
-        # combine two spansets into one by always taking the span, that has the highest range. E.g. if one has start=4, end=5 and the other start=4, end=6, take the one with start=4, end=6
+
         combined = self.union(other)
-        cursor = {}
-        for span in combined:
-            if span.start in cursor:
-                if span.end > cursor[span.start].end:
-                    cursor[span.start] = span
-            cursor[span.start] = span
-        return SpanSet(cursor.values())
+        perms = permutations(combined, 2)
+        contained = list(
+            starmap(lambda x, y: (x, y) if x.range in y.range else None, perms)
+        )
+        to_remove = {x[0] for x in contained if x is not None}
+        return SpanSet(span for span in combined if span not in to_remove)
