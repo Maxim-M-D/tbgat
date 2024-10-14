@@ -1,4 +1,3 @@
-
 import shapely
 from tbgat._types import OSM
 from tbgat.postprocessing._types import ADM1
@@ -11,6 +10,7 @@ get_file_path = lambda x: pkg_resources.resource_filename(
     "tbgat", f"postprocessing/data/{x}"
 )
 
+
 class ADM1Mapper:
     def __init__(self):
         self._read_adm1_geojson()
@@ -18,9 +18,7 @@ class ADM1Mapper:
     def _read_adm1_geojson(self):
         """Reads the geojson file containing the ADM1 boundaries of Ukraine and merges Kyiv and Kyiv Oblast into one polygon."""
         path = get_file_path("geoBoundaries-UKR-ADM1.geojson")
-        self.adm1: gpd.GeoDataFrame = gpd.read_file(
-            path
-        )
+        self.adm1: gpd.GeoDataFrame = gpd.read_file(path)
         kyiv_oblast = self.adm1[self.adm1["shapeName"] == "Kyiv Oblast"]
         kyiv = self.adm1[self.adm1["shapeName"] == "Kyiv"]
         kyiv_oblast["geometry"] = (
@@ -42,7 +40,9 @@ class ADM1Mapper:
             found_adms["centroid_distance"] = found_adms["geometry"].centroid.apply(
                 lambda x: polygon.distance(x)
             )
-            closest_adm_centroid = found_adms.loc[found_adms["centroid_distance"].idxmin()]
+            closest_adm_centroid = found_adms.loc[
+                found_adms["centroid_distance"].idxmin()
+            ]
 
             return ADM1(
                 adm1=closest_adm_centroid.shapeName,

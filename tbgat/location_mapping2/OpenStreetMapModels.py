@@ -1,6 +1,7 @@
 from typing import Annotated
 from pydantic import AfterValidator, BaseModel
 
+
 class AlternateNameExtract(BaseModel):
     alternateNameId: int
     geonameid: int
@@ -12,6 +13,8 @@ class AlternateNameExtract(BaseModel):
     isHistoric: int | Annotated[str, AfterValidator(lambda x: 0)]
     from_date: str
     to_date: str
+    word: str
+
 
 class AlternateName(BaseModel):
     geonameid: int
@@ -19,6 +22,7 @@ class AlternateName(BaseModel):
     name_de: str
     name_ru: str
     name_ua: str
+    word: str
 
 
 class OSMExtract(BaseModel):
@@ -30,4 +34,3 @@ class OSMExtract(BaseModel):
     feature_class: str
     feature_code: str
     population: int
-    

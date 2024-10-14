@@ -14,6 +14,7 @@ class OSM(BaseModel):
     name_de: str
     name_ru: str
     name_ua: str
+    word: str
 
     def __hash__(self):
         return hash(self.geonameid)
@@ -22,4 +23,4 @@ class OSM(BaseModel):
         return self.name
 
     def __repr__(self):
-        return f"OSM(geonameid={self.geonameid}, name={self.name}, latitude={self.latitude}, longitude={self.longitude}, feature_name={self.feature_name}, feature_class={self.feature_class}, feature_code={self.feature_code}, population={self.population}, name_en={self.name_en}, name_de={self.name_de}, name_ru={self.name_ru}, name_ua={self.name_ua})"
+        return f"OSM(geonameid={self.geonameid}, name={self.name}, latitude={self.latitude}, longitude={self.longitude}, feature_name={self.feature_name}, feature_class={self.feature_class}, feature_code={self.feature_code}, population={self.population}, name_en={self.name_en}, name_de={self.name_de}, name_ru={self.name_ru}, name_ua={self.name_ua}, word={self.word})"
