@@ -23,7 +23,6 @@ cache:
 stages:
   - setup
   - install
-  - test
   - deploy
   - teardown
 

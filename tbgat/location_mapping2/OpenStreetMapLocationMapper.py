@@ -1,5 +1,7 @@
 import sqlite3
 from typing import Iterable, List
+
+from pydantic import BaseModel
 from tbgat.location_mapping2.OpenStreetMapModels import (
     AlternateName,
     AlternateNameExtract,
@@ -38,6 +40,14 @@ GEONAME_BY_ID_WITH_FEATURE_CLASS_SQL = """
         on g.feature_class || '.' || g.feature_code = f.code
         WHERE g.geonameid = {} and g.feature_class in ('{}')
         """
+
+
+class GeonameIdWithWord(BaseModel):
+    geonameid: int
+    word: str
+
+    def __hash__(self) -> int:
+        return hash(self.geonameid)
 
 
 class OSMMapper:
@@ -106,10 +116,17 @@ class OSMMapper:
                 for i in c.fetchall()
             ]
 
-        unique_geoname_ids = set([i.geonameid for i in found_alternatenames])
+        unique_geoname_ids = set(
+            [
+                GeonameIdWithWord(geonameid=i.geonameid, word=word)
+                for i in found_alternatenames
+            ]
+        )
         return unique_geoname_ids
 
-    def _query_alternatenames_by_geonameid(self, geoname_ids: Iterable[int]):
+    def _query_alternatenames_by_geonameid(
+        self, geoname_ids: Iterable[GeonameIdWithWord]
+    ):
         with sqlite3.connect("osm.db") as conn:
             res = []
             c = conn.cursor()
@@ -118,7 +135,12 @@ class OSMMapper:
             for geoname_id in geoname_ids:
                 c.execute(ALTERNATENAME_BY_ID_SQL, (geoname_id,))
                 res.extend(
-                    [AlternateNameExtract.model_validate(dict(i)) for i in c.fetchall()]
+                    [
+                        AlternateNameExtract.model_validate(
+                            dict(i) | {"word": geoname_id.word}
+                        )
+                        for i in c.fetchall()
+                    ]
                 )
 
         unique_alternatenames = self.unique_alternatenames_from_extract(res)
