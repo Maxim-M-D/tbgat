@@ -133,7 +133,7 @@ class OSMMapper:
             conn.row_factory = sqlite3.Row
             c.row_factory = conn.row_factory
             for geoname_id in geoname_ids:
-                c.execute(ALTERNATENAME_BY_ID_SQL, (geoname_id,))
+                c.execute(ALTERNATENAME_BY_ID_SQL, (geoname_id.geonameid,))
                 res.extend(
                     [
                         AlternateNameExtract.model_validate(
