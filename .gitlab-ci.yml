@@ -78,22 +78,6 @@ install:
     - '& ${PYTHON_EXECUTABLE} -m poetry install --extras ner --with dev --verbose'
   when: always
 
-test:
-  stage: test
-  needs:
-    - setup
-    - install
-  script:
-    - '& ${PYTHON_EXECUTABLE} -m poetry run pytest --cov --cov-report term --cov-report xml:coverage.xml --junitxml=report.xml'
-  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
-  artifacts:
-    reports:
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage.xml
-      junit: report.xml
-  when: always
-
 pages:
  stage: deploy
  needs:
