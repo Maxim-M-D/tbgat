@@ -15,7 +15,7 @@ class ADM1:
 
 
 class GeoDocWithADM1(GeoDoc):
-    adm1: ADM1
+    adm1: List[ADM1]
 
     def __init__(
         self,
